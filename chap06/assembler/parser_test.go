@@ -1,4 +1,4 @@
-package chap06
+package assembler
 
 import (
 	"bufio"
@@ -221,7 +221,7 @@ func Test_parserImpl_Dest(t *testing.T) {
 			fields: fields{
 				currentLine: "0;JMP",
 			},
-			want: "",
+			want: "null",
 		},
 	}
 	for _, tt := range tests {
@@ -309,14 +309,14 @@ func Test_parserImpl_Jump(t *testing.T) {
 			fields: fields{
 				currentLine: "M=0",
 			},
-			want: "",
+			want: "null",
 		},
 		{
 			name: "3: no jump, minus",
 			fields: fields{
 				currentLine: "D=D-A",
 			},
-			want: "",
+			want: "null",
 		},
 		{
 			name: "4: none(just jump)",

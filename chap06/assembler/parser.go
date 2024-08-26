@@ -1,19 +1,35 @@
-package chap06
+package assembler
 
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
-type commandType = int
+type commandType int
 
 const (
 	A_COMMAND commandType = iota
 	C_COMMAND
 	L_COMMAND
+	COMMENT
 )
+
+func (ct commandType) String() string {
+	switch ct {
+	case A_COMMAND:
+		return "A_COMMAND"
+	case C_COMMAND:
+		return "C_COMMAND"
+	case L_COMMAND:
+		return "L_COMMAND"
+	}
+
+	return "unknown"
+}
 
 type Parser interface {
 	HasMoreCommands() bool
@@ -23,6 +39,7 @@ type Parser interface {
 	Dest() string
 	Comp() string
 	Jump() string
+	GetLineNumber() int
 }
 
 type parserImpl struct {
@@ -37,12 +54,37 @@ func NewParser(in io.Reader) Parser {
 	}
 }
 
+func (p *parserImpl) GetLineNumber() int {
+	return p.currentLineNumber
+}
+
+func (p *parserImpl) skipWhitespace() {
+	ch, err := p.input.Peek(1)
+	if err != nil {
+		return
+	}
+	r, _ := utf8.DecodeRune(ch)
+	for unicode.IsSpace(r) {
+		if r == '\n' {
+			p.currentLineNumber++
+		}
+		p.input.Discard(1)
+		ch, err := p.input.Peek(1)
+		if err != nil {
+			return
+		}
+		r, _ = utf8.DecodeRune(ch)
+	}
+}
+
 func (p *parserImpl) HasMoreCommands() bool {
 	_, err := p.input.Peek(1)
 	return err != io.EOF
 }
 func (p *parserImpl) Advance() error {
+	p.skipWhitespace()
 	line, err := p.input.ReadString('\n')
+	p.currentLineNumber++
 	if err != nil {
 		return fmt.Errorf("%w: line %d", err, p.currentLineNumber)
 	}
@@ -58,6 +100,8 @@ func (p *parserImpl) CurrentCommandType() commandType {
 		return L_COMMAND
 	case '@':
 		return A_COMMAND
+	case '/':
+		return COMMENT
 	default:
 		return C_COMMAND
 	}
@@ -80,7 +124,7 @@ func (p *parserImpl) Symbol() string {
 func (p *parserImpl) Dest() string {
 	eqIndex := strings.Index(p.currentLine, "=")
 	if eqIndex == -1 {
-		return ""
+		return "null"
 	}
 	return p.currentLine[:eqIndex]
 }
@@ -89,11 +133,11 @@ func (p *parserImpl) Comp() string {
 	dest := p.Dest()
 	startIndex := 0
 	endIndex := len(p.currentLine)
-	if dest != "" {
+	if dest != "null" {
 		startIndex = len(dest) + len("=") // =も含む.
 	}
 	jump := p.Jump()
-	if jump != "" {
+	if jump != "null" {
 		endIndex -= (len(jump) + len(";"))
 	}
 	return p.currentLine[startIndex:endIndex]
@@ -102,7 +146,7 @@ func (p *parserImpl) Comp() string {
 func (p *parserImpl) Jump() string {
 	semicolonIndex := strings.Index(p.currentLine, ";")
 	if semicolonIndex == -1 {
-		return ""
+		return "null"
 	}
 	return p.currentLine[semicolonIndex+1:]
 }
