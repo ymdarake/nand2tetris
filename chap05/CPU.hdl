@@ -32,5 +32,44 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-	//// Replace this comment with your code.
+    // p. 76 参照.
+
+    // p. 58 「dest領域の仕様」参照。
+    // d1 d2 d3 の各ビットが出力先を示す。
+    // d1 -> A
+    // d2 -> D
+    // d3 -> M
+
+    // ALUに入力する A/M の部分の決定.
+    // comp領域 sel[12] (=命令でaとされているビット.)
+    // a-bit=0: load ALU with A data to the ALU, else load ALU with M data
+    // p. 57 参照.
+
+    // 「前クロックの出力」と「今クロックの命令」のどちらをAレジスタに入れるか。0がA命令、1がC命令。
+    Mux16(a=instruction,b=outALU,sel=instruction[15],out=Ainput);				// if instruction[15] = 0: its an address, else it's an instruction
+    Mux(a=true,b=instruction[5],sel=instruction[15],out=ALoadBit);  			// if instruction[15] = 0 or d1=1 : set the A-loadBit to 1, else A-loadBit=0
+    ARegister(in=Ainput,load=ALoadBit,out=ARegisterOut,out[0..14]=addressM);	// if ALoadBit=1: set A-Register to (address or outALU)
+    
+	Mux16(a=ARegisterOut,b=inM,sel=instruction[12],out=AorM);	 				//if the a-bit=0: load ALU with A data to the ALU, else load ALU with M data
+    ALU(x=DRegisterOut,y=AorM,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],f=instruction[7],no=instruction[6],out=outALU,out=outM,zr=zeroed,ng=negative);
+		
+	And(a=instruction[15],b=instruction[4],out=DLoadBit);						//if instruction[15] = 1 and d2=1: set DLoadBit=1
+	DRegister(in=outALU,load=DLoadBit,out=DRegisterOut);						//if DLoadBit=1: load the ALU output to the D-register
+
+    And(a=instruction[15],b=instruction[3],out=writeM);							//if if instruction[15] = 1 and d3=1, set writeM to 1
+    
+    And(a=instruction[0],b=instruction[15],out=j3);                             // if instruction[15] = 1 and instruction[0]: j3=1 
+    And(a=instruction[1],b=instruction[15],out=j2);			        		    // if instruction[15] = 1 and instruction[1]: j2=1 
+    And(a=instruction[2],b=instruction[15],out=j1);                             // if instruction[15] = 1 and instruction[2]: j1=1 
+    
+	// Jump判定.
+	And(a=j1,b=negative,out=negJump);
+    And(a=j2,b=zeroed,out=zeroJump);
+    Or(a=zeroed,b=negative,out=nonNeg);
+    Not(in=nonNeg,out=nonNegJump);
+    Or(a=negJump,b=zeroJump,out=negZeroJump);
+    And(a=nonNegJump,b=j3,out=posJump);
+    Or(a=negZeroJump,b=posJump,out=outJumper);
+	
+    PC(in=ARegisterOut,load=outJumper,inc=true,reset=reset,out[0..14]=pc);
 }
