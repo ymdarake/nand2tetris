@@ -26,10 +26,20 @@ func main() {
 	lexer := vm.NewLexer(string(content))
 	parser := vm.NewParser(lexer)
 	program := parser.Parse()
+	writer := vm.NewCodeWriter()
 
-	output := ""
-	for _, v := range program.Instructions {
-		output += fmt.Sprintf("%#v\n", v)
+	// TODO: ディレクトリ対応
+	writer.SetFileName(args.File)
+	for _, ins := range program.Instructions {
+		switch ins.(type) {
+		case vm.StackInstruction:
+			ins := ins.(vm.StackInstruction)
+			writer.WritePushPop(ins)
+		case vm.ArithmeticInstruction:
+			ins := ins.(vm.ArithmeticInstruction)
+			writer.WriteArithmetic(ins)
+		}
 	}
-	os.WriteFile(fmt.Sprintf("%s.intermediate", args.File), []byte(output), os.ModePerm)
+	writer.Close()
+	// os.WriteFile(fmt.Sprintf("%s.intermediate", args.File), []byte(output), os.ModePerm)
 }

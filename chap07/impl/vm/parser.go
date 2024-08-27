@@ -88,9 +88,9 @@ func (p *parserImpl) parseStackInstruction() StackInstruction {
 	instruction := StackInstruction{}
 	instruction.Command = p.currentToken
 	p.nextToken()
-	instruction.Arg1 = p.currentToken
+	instruction.Segment = p.currentToken
 	p.nextToken()
-	instruction.Arg2 = p.currentToken
+	instruction.Index = p.currentToken
 	return instruction
 }
 

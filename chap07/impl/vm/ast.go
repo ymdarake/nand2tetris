@@ -13,12 +13,17 @@ type Instruction interface {
 
 type StackInstruction struct {
 	Command Token
-	Arg1    Token
-	Arg2    Token
+	Segment Token
+	Index   Token
 }
 
 func (s StackInstruction) Literal() string {
-	return fmt.Sprintf("%s %s %s", s.Command.Literal, s.Arg1.Literal, s.Arg2.Literal)
+	return fmt.Sprintf("%s %s %s", s.Command.Literal, s.Segment.Literal, s.Index.Literal)
+}
+
+type ArithmeticInstruction interface {
+	// ただのinterfaceつくる用
+	GetCommand() Token
 }
 
 type UnaryArithmeticInstruction struct {
@@ -28,6 +33,9 @@ type UnaryArithmeticInstruction struct {
 func (ins UnaryArithmeticInstruction) Literal() string {
 	return fmt.Sprintf("%s", ins.Command.Literal)
 }
+func (ins UnaryArithmeticInstruction) GetCommand() Token {
+	return ins.Command
+}
 
 type BinaryArithmeticInstruction struct {
 	Command Token
@@ -35,4 +43,8 @@ type BinaryArithmeticInstruction struct {
 
 func (ins BinaryArithmeticInstruction) Literal() string {
 	return fmt.Sprintf("%s", ins.Command.Literal)
+}
+
+func (ins BinaryArithmeticInstruction) GetCommand() Token {
+	return ins.Command
 }
