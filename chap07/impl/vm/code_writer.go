@@ -6,6 +6,11 @@ import (
 	"strconv"
 )
 
+const (
+	TEMP_BASE_ADDRESS    = 5
+	POINTER_BASE_ADDRESS = 3
+)
+
 type CodeWriter interface {
 	SetFileName(filename string)
 	// NOTE: 7章ではひとまず算術命令、スタック命令のみを実装する
@@ -99,6 +104,7 @@ func (c *codeWriterImpl) pushFromDRegister() {
 	c.code += "@SP\n"   // MレジスタにSPのアドレスを入れる
 	c.code += "M=M+1\n" // SPのアドレスをひとつ進める
 }
+
 func (c *codeWriterImpl) writePop(ins StackInstruction) error {
 	switch ins.Segment.Literal {
 	case "local", "argument", "this", "that":
@@ -131,16 +137,18 @@ func (c *codeWriterImpl) writePop(ins StackInstruction) error {
 	return nil
 }
 
+func (c *codeWriterImpl) popToMRegister() {
+	c.code += "@SP\n"   // MCursor = var(SP)
+	c.code += "M=M-1\n" // M=M[--MCursor]
+	c.code += "A=M\n"   // Addr = M[MCursor]
+}
+
 func (c *codeWriterImpl) writeBinaryArithmeticInstruction(ins ArithmeticInstruction) error {
 	// ひとつ目の引数をDレジスタに持ってくる
-	c.code += "@SP\n"
-	c.code += "M=M-1\n"
-	c.code += "D=M\n"
-
+	c.popToMRegister()
+	c.code += "D=M\n" // D=M[Addr]
 	// ふたつ目の引数をAレジスタに持ってくる
-	c.code += "@SP\n"
-	c.code += "M=M-1\n"
-	c.code += "A=M\n"
+	c.popToMRegister()
 
 	switch ins.GetCommand().Type {
 	case CMD_ADD:

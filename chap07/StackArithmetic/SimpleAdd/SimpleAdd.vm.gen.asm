@@ -14,6 +14,7 @@ M=D
 M=M+1
 @SP
 M=M-1
+A=M
 D=M
 @SP
 M=M-1
